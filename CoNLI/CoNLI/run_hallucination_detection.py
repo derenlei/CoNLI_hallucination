@@ -7,7 +7,7 @@ from pathlib import Path
 import time
 from tqdm import tqdm
 from CoNLI.modules.arguments import DetectionArguments, create_openai_arguments, create_ta_arguments
-from CoNLI.modules.data_utils.data_loader import DataLoader
+from CoNLI.modules.data.data_loader import DataLoader
 from CoNLI.modules.entity_detector import EntityDetectorFactory
 from CoNLI.modules.sentence_selector import SentenceSelectorFactory
 from CoNLI.modules.hallucination_detector import HallucinationDetector
