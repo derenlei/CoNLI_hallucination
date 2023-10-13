@@ -1,23 +1,19 @@
+import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import json
 import logging
-
+import os
+from pathlib import Path
+import time
 from tqdm import tqdm
 from CoNLI.modules.arguments import DetectionArguments, create_openai_arguments, create_ta_arguments
-from CoNLI.modules.data_loader import DataLoader
+from CoNLI.modules.data_utils.data_loader import DataLoader
 from CoNLI.modules.entity_detector import EntityDetectorFactory
 from CoNLI.modules.sentence_selector import SentenceSelectorFactory
 from CoNLI.modules.hallucination_detector import HallucinationDetector
 from CoNLI.modules.hd_constants import AllHallucinations, FieldName
 from CoNLI.modules.logging_utils import init_logging
 from CoNLI.modules.conversion_utils import str2bool
-
-import pandas as pd
-import argparse
-import json
-import os
-import time
-from pathlib import Path
-
 
 def get_optional_field(hallucination, field_name, default_value = ''):
     if field_name in hallucination:
@@ -44,7 +40,7 @@ def save_hallucinations(hallucinations, output_folder : str):
         )
     
     with open(hallucination_finalresults, 'w') as outFinal:
-        outFinal.write('enc_id\tsentenceid\tdetectiontype\tspan\treason\tname\ttype\n')
+        outFinal.write('data_id\tsentenceid\tdetectiontype\tspan\treason\tname\ttype\n')
     
         required_field_names = [
                         FieldName.DATA_ID,
@@ -61,21 +57,20 @@ def save_hallucinations(hallucinations, output_folder : str):
             field_values = [get_required_field(h, fn) for fn in required_field_names] + [get_optional_field(h, fn) for fn in optional_field_names]
             outFinal.write('\t'.join(field_values) + '\n')
 
-
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--outputfolder',
+        '--output_folder',
         required=True,
         help='Where to output all of this runs data',
         type=str)
     parser.add_argument(
-        '--inputhypothesis',
+        '--input_hypothesis',
         required=True,
         help='The folder where all of your raw responses are located; It can also load sentence-level tsv file with columns: DataID, SentenceID, Sentence. The Sentence will be the input strings for detection',
         type=str)
     parser.add_argument(
-        '--inputsrc',
+        '--input_src',
         required=True,
         help='The folder where all of your source documents are located',
         type=str)
@@ -126,12 +121,12 @@ def parse_arguments():
         help='The maximum number of entity detection batches to process in parallel per Hallucination Detection Module.  If set to 1, will run sequentially',
         type=int)
     parser.add_argument(
-        '--simpleprogressbar',
+        '--simple_progress_bar',
         default='True',
         help='Shows a simplified progress bar for the entire run (data-level progress rather than split by different batches of hallucination detection requests)',
         type=str)
     parser.add_argument(
-        '--testmode',
+        '--test_mode',
         default=0,
         help='Simple iteration filter for testing.  Will run E2E but only on the first <N> data, specified by this int',
         type=int)
@@ -145,8 +140,8 @@ def parse_arguments():
     args.max_parallel_data = max(args.max_parallel_data, 1)
     args.max_parallelism = max(args.max_parallelism, 1)
     args.entity_detection_parallelism = max(args.entity_detection_parallelism, 1)
-    args.testmode = max(args.testmode, 0)
-    args.simpleprogressbar = str2bool(args.simpleprogressbar)
+    args.test_mode = max(args.test_mode, 0)
+    args.simple_progress_bar = str2bool(args.simple_progress_bar)
     
     print(f'Input Arguments: {args}')
     return args
@@ -154,7 +149,7 @@ def parse_arguments():
 if __name__ == '__main__':
     args = parse_arguments()
     
-    os.makedirs(args.outputfolder, exist_ok=True)
+    os.makedirs(args.output_folder, exist_ok=True)
 
     init_logging(args.log_level, args.logfile_name)
     logging.info('Starting Hallucination Detection')
@@ -172,17 +167,17 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    hallucination_result_folder = os.path.join(args.outputfolder, 'hallucinations')
+    hallucination_result_folder = os.path.join(args.output_folder, 'hallucinations')
     os.makedirs(hallucination_result_folder, exist_ok=True)
-    intermediate_result_folder = os.path.join(args.outputfolder, 'intermediate')
+    intermediate_result_folder = os.path.join(args.output_folder, 'intermediate')
     os.makedirs(intermediate_result_folder, exist_ok=True)
     
-    disable_progress_bar = not args.simpleprogressbar
+    disable_progress_bar = not args.simple_progress_bar
 
     dataloader = DataLoader(
-        hypothesis=args.inputhypothesis,
-        src_folder=args.inputsrc,
-        testmode=args.testmode)
+        hypothesis=args.input_hypothesis,
+        src_folder=args.input_src,
+        test_mode=args.test_mode)
 
     hypothesis = dataloader._hypothesis  # Not used
     source_docs = dataloader._src_docs
@@ -193,8 +188,8 @@ if __name__ == '__main__':
     # Configure the medical bkg hallucination detection module.
     # The input consists of the ground truth file for analysis and a block
     # list (of medical terms you find later that you'd like to ignore)
-    pbar_disabled_data_level = not args.simpleprogressbar
-    pbar_disabled_batch_request_level = args.simpleprogressbar
+    pbar_disabled_data_level = not args.simple_progress_bar
+    pbar_disabled_batch_request_level = args.simple_progress_bar
 
     sentence_selector = None
     if args.sentence_selector_type:
@@ -209,7 +204,7 @@ if __name__ == '__main__':
     detection_agent = HallucinationDetector(
         sentence_selector=sentence_selector,
         entity_detector=entity_detector,
-        output_folder=args.outputfolder,
+        output_folder=args.output_folder,
         openai_args=openai_args,
         detection_args=detector_args,
         aoai_config_file=args.aoai_config_file,
@@ -225,25 +220,25 @@ if __name__ == '__main__':
             data_tasks = {
                 executor.submit(
                     detection_agent.detect_hallucinations,
-                    enc_id,
-                    source_docs[enc_id],
-                    hyp_sentences_preproc[enc_id],): enc_id for enc_id in data_ids}
+                    data_id,
+                    source_docs[data_id],
+                    hyp_sentences_preproc[data_id],): data_id for data_id in data_ids}
             for task in as_completed(data_tasks):
                 try:
-                    enc_id = data_tasks[task]
+                    data_id = data_tasks[task]
                     hallucinations = task.result()
                     for h in hallucinations:
                         allHallucinations.append(h)
                 except Exception as exc:
                     print(f'Error!! {type(exc).__name__}: {exc}')
                 else:
-                    num_sentences : int = len(hyp_sentences_preproc[enc_id])
+                    num_sentences : int = len(hyp_sentences_preproc[data_id])
                     num_hallucinations : int = len(hallucinations)
                     hallucination_rate : float = num_hallucinations / num_sentences if num_sentences > 0 else 0.0
                     hallucinated : bool = num_hallucinations > 0
                     retval_jsonl.append(
                         {
-                            AllHallucinations.DATA_ID: enc_id,
+                            AllHallucinations.DATA_ID: data_id,
                             AllHallucinations.HALLUCINATED: hallucinated,
                             AllHallucinations.HALLUCINATION_SCORE: hallucination_rate,
                             AllHallucinations.HALLUCINATIONS: hallucinations,
