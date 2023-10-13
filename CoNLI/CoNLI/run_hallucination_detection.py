@@ -12,8 +12,8 @@ from CoNLI.modules.entity_detector import EntityDetectorFactory
 from CoNLI.modules.sentence_selector import SentenceSelectorFactory
 from CoNLI.modules.hallucination_detector import HallucinationDetector
 from CoNLI.modules.hd_constants import AllHallucinations, FieldName
-from CoNLI.modules.logging_utils import init_logging
-from CoNLI.modules.conversion_utils import str2bool
+from CoNLI.modules.utils.logging_utils import init_logging
+from CoNLI.modules.utils.conversion_utils import str2bool
 
 def get_optional_field(hallucination, field_name, default_value = ''):
     if field_name in hallucination:
