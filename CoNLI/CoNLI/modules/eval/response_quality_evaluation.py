@@ -14,7 +14,7 @@ class QualityEvaluator:
         self.sources = sources
         self.gt_response = gt_response
 
-    def evaluate_summaries(self):
+    def evaluate_responses(self):
         # load response to test against
         data_id_set = set([])
         results = []
