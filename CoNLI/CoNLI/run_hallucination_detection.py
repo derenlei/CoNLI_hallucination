@@ -102,7 +102,7 @@ def parse_arguments():
     parser.add_argument(
         '--ta_config_setting',
         required=False,
-        default='ta-health',
+        default='ta-general',
         help='The configuration setting to run against (ta_config.json)',
         type=str)
     parser.add_argument(
@@ -204,7 +204,6 @@ if __name__ == '__main__':
     detection_agent = HallucinationDetector(
         sentence_selector=sentence_selector,
         entity_detector=entity_detector,
-        output_folder=args.output_folder,
         openai_args=openai_args,
         detection_args=detector_args,
         aoai_config_file=args.aoai_config_file,
