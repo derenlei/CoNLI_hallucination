@@ -4,7 +4,6 @@ import re
 from azure.identity import AzureCliCredential, ManagedIdentityCredential
 import logging
 import os
-import platform
 import openai
 import time
 from pathlib import Path
