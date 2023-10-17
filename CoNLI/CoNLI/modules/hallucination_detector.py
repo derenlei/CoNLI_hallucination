@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List
 from pathlib import Path
 
+import CoNLI.modules.utils.gpt_output_utils as gpt_output_utils
 from CoNLI.modules.arguments import OpenaiArguments, DetectionArguments
 from CoNLI.modules.entity_detector import EntityDetectorBase, GenTAEntityDetector
 from CoNLI.modules.hallucination_detection_prompt import hallucination_detection_prompt
@@ -15,7 +16,6 @@ from CoNLI.modules.hd_constants import FieldName
 from CoNLI.modules.sentence_selector import SentenceSelectorBase
 from CoNLI.modules.utils.sentence_splitter import SentenceSplitter
 from CoNLI.modules.utils.aoai_utils import AOAIUtil
-import CoNLI.modules.utils.gpt_output_utils as gpt_output_utils
 
 def count_tokens(text : str) -> int:
     import re
