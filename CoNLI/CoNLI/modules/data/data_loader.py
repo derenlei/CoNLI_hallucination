@@ -2,7 +2,7 @@ from glob import glob
 import os
 from typing import Dict
 import pandas as pd
-from CoNLI.modules.data_utils.response_preprocess import ResponsePreprocess
+from CoNLI.modules.data.response_preprocess import ResponsePreprocess
 
 
 class DataLoader:
@@ -31,7 +31,7 @@ class DataLoader:
         print(f'Hypotheses Found: {len(self._hypothesis_preproc_sentences)}')
 
         self._src_docs = self.__load_file_inputs(src_folder, "*.txt")
-        print(f'Transcript Files Found: {len(self._src_docs)}')
+        print(f'Source Files Found: {len(self._src_docs)}')
 
         self._data_ids = list(set(self._hypothesis_preproc_sentences.keys(
         )).intersection(set(self._src_docs.keys())))
@@ -60,8 +60,7 @@ class DataLoader:
         important_columns = hypdf[["DataID", "SentenceID", "Sentence"]]
         important_columns = important_columns.drop_duplicates()
         for index, row in important_columns.iterrows():
-            # because the loaded result IDs are int, but transcripts IDs are
-            # string
+            # because the loaded result IDs are int, but source IDs are string
             En_Id = str(row["DataID"])
             if not hypsens.__contains__(En_Id):
                 hypsens[En_Id] = []
@@ -76,14 +75,10 @@ class DataLoader:
         if len(self._data_ids) == 0:
             print('=============\n!! ERROR !!\n=============\nThere are no matching data.\nTerminating the run..\n=============')
             raise ValueError(
-                '--inputhypothesis or --inputtranscripts is incorrect.  We found no matching data ids.')
+                '--inputhypothesis or --inputsource is incorrect.  We found no matching data ids.')
 
-        if len(
-            self._data_ids) != len(
-            self._hypothesis_preproc_sentences) or len(
-            self._data_ids) != len(
-                self._src_docs):
-            print('=============\n!! WARNING !!\n=============\nThe number of unique data ids is different between your transcript and hypothesis folders.\nPlease confirm your inputs are correct before proceeding...\n=============')
+        if len(self._data_ids) != len(self._hypothesis_preproc_sentences) or len(self._data_ids) != len(self._src_docs):
+            print('=============\n!! WARNING !!\n=============\nThe number of unique data ids is different between your source and hypothesis folders.\nPlease confirm your inputs are correct before proceeding...\n=============')
 
     def hypothesis_preprocess_into_sentences(self, hypothesis) -> dict:
         hyp_sentences_preproc = {}
